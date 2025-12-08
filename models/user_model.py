@@ -17,4 +17,6 @@ class User(Base):
     rating = Column(Float)
     availability = Column(Boolean)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    
     

@@ -1,4 +1,4 @@
-from sqlalchemy import Column , Integer , String , Float , Datetime , ForeignKey  
+from sqlalchemy import Column , Integer , String , Float , DateTime , ForeignKey  
 from datetime import datetime 
 from db.database import Base
 
@@ -10,10 +10,10 @@ class Booking(Base):
     vendor_id = Column(Integer, ForeignKey("users.user_id"))
     service_id = Column(Integer,ForeignKey("services.service_id"))
     address = Column(String)
-    date_time = Column(Datetime)
+    date_time = Column(DateTime)
     status = Column(String)
     price = Column(Float)
-    create_at = Column(Datetime, default = datetime.utcnow )
+    create_at = Column(DateTime, default = datetime.utcnow )
 
     
 

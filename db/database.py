@@ -5,7 +5,7 @@ username = "postgres"
 password = "AcademyRootPassword"
 hostname = "localhost"
 port = "5432"
-db_name = ""
+db_name = "Quick_Fix"
 
 DB_URL = f"postgresql+psycopg2://{username}:{password}@{hostname}:{port}/{db_name}"
 

@@ -1,4 +1,4 @@
-from sqlalchemy import Column , Integer , String , Float , Datetime ,ForeignKey
+from sqlalchemy import Column , Integer , String , Float , DateTime ,ForeignKey
 from datetime import datetime
 from db.database import Base
 
@@ -10,7 +10,7 @@ class Payment(Base):
     amount = Column(Float)
     payment_method = Column(String)
     status = Column(String)
-    payment_date = Column(Datetime, default= datetime.utcnow)
+    payment_date = Column(DateTime, default= datetime.utcnow)
 
 
 

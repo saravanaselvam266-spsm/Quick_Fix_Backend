@@ -1,4 +1,4 @@
-from sqlalchemy import Column , Integer , Float , Datetime , ForeignKey
+from sqlalchemy import Column , Integer , Float , DateTime , ForeignKey
 from datetime import datetime
 from db.database import Base
 
@@ -9,4 +9,4 @@ class Location(Base):
     user_id = Column(Integer,ForeignKey("users.user_id"))
     latitude = Column(Float)
     longitude = Column(Float)
-    updated_at = Column(Datetime ,default= datetime.utcnow)
+    updated_at = Column(DateTime ,default= datetime.utcnow)

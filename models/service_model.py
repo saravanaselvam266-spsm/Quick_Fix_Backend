@@ -8,6 +8,7 @@ class Service(Base):
     service_name = Column(String)
     description = Column(String)
     base_price  = Column(Float)
-    vehicle_type = Column(String)
+    vehicle_type = Column(String) 
+    
 
     
