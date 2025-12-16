@@ -8,7 +8,7 @@ class User(Base):
     user_id = Column(Integer, primary_key = True)
     name = Column(String)
     email = Column(String)
-    phone = Column(Integer)
+    phone = Column(String)
     password_hash = Column(String)
     role = Column(String)
     address = Column(String)

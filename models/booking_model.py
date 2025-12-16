@@ -11,7 +11,8 @@ class Booking(Base):
     service_id = Column(Integer,ForeignKey("services.service_id"))
     address = Column(String)
     date_time = Column(DateTime)
-    status = Column(String)
+    status = Column(String ,default="pending")
+    completed_at = Column(DateTime, nullable=True)
     price = Column(Float)
     create_at = Column(DateTime, default = datetime.utcnow )
 

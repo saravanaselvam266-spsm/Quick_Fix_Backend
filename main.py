@@ -7,17 +7,16 @@ from router.payment_router import router as payment_router
 from router.service_router import router as service_router
 from fastapi.middleware.cors import CORSMiddleware
 
-
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin=["*"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_header=["*"],
+    allow_headers=["*"], 
 )
 
 app.include_router(user_router)
