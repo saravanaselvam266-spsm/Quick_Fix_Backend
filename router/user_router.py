@@ -48,6 +48,7 @@ def delete_user(user_id: int, db: Session = Depends(connect_db)):
 
 @router.post("/customers")
 def create_customer(data: CustomerSignup, db: Session = Depends(connect_db)):
+    # Explicitly set role
     new_user = User(**data.model_dump(), role="customer")
     db.add(new_user)
     db.commit()
@@ -60,7 +61,9 @@ def create_vendor(data: VendorSignup, db: Session = Depends(connect_db)):
     vendor_data = data.model_dump()
     vendor_data["role"] = "vendor"
     vendor_data["rating"] = 0.0
-
+    
+    # Ensure mapping matches model
+    # Note: Schema has experience_years, model has experience_years
     new_vendor = User(**vendor_data)
 
     db.add(new_vendor)
@@ -87,6 +90,7 @@ def login_user(data: LoginInput, db: Session = Depends(connect_db)):
     if not user:
         return {"error": "User not found"}
 
+    # In production use hashing!
     if user.password_hash != data.password:
         return {"error": "Invalid password"}
 
@@ -105,7 +109,7 @@ def user_dashboard(user_id: int, db: Session = Depends(connect_db)):
         db.query(Booking)
         .filter(
             Booking.customer_id == user_id,
-            Booking.status.in_(["upcoming", "in_progress"]),
+            Booking.status.in_(["upcoming", "in_progress", "pending", "accepted"]),
         )
         .count()
     )
@@ -147,19 +151,19 @@ def user_dashboard(user_id: int, db: Session = Depends(connect_db)):
 def user_dashboard_summary(user_id: int, db: Session = Depends(connect_db)):
 
     upcoming = db.query(Booking).filter(
-        Booking.user_id == user_id,
-        Booking.status.in_(["upcoming", "in-progress"])
+        Booking.customer_id == user_id,
+        Booking.status.in_(["upcoming", "in_progress", "pending", "accepted"])
     ).count()
 
     completed = db.query(Booking).filter(
-        Booking.user_id == user_id,
+        Booking.customer_id == user_id,
         Booking.status == "completed"
     ).count()
 
-    total_spent = db.query(Booking).filter(
-        Booking.user_id == user_id,
+    total_spent = db.query(func.coalesce(func.sum(Booking.price), 0)).filter(
+        Booking.customer_id == user_id,
         Booking.status == "completed"
-    ).with_entities(func.sum(Booking.price)).scalar() or 0
+    ).scalar()
 
     return {
         "upcoming": upcoming,
@@ -189,13 +193,12 @@ def get_vendor_stats(vendor_id: int, db: Session = Depends(connect_db)):
 
     today_earnings = get_earnings([
         func.date(Booking.date_time) == today,
-        Booking.status.in_(["completed", "accepted"]) # Assuming accepted also counts or just completed? Let's assume completed for earnings usually.
-        # But for 'active' jobs logic, user might imply accepted ones.
-        # Let's count 'completed' for earnings.
+        Booking.status.in_(["completed"]) 
     ])
 
     week_earnings = get_earnings([
-        func.date(Booking.date_time) >= start_of_week
+        func.date(Booking.date_time) >= start_of_week,
+        Booking.status.in_(["completed"]) 
     ])
     
     active_jobs = get_count([
@@ -213,3 +216,9 @@ def get_vendor_stats(vendor_id: int, db: Session = Depends(connect_db)):
         "active_jobs": active_jobs,
         "completed_today": completed_today
     }
+
+
+
+
+
+
