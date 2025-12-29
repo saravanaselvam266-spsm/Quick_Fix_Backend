@@ -6,7 +6,7 @@ from dependencies import connect_db
 from models.booking_model import Booking
 from sqlalchemy import func
 
-router = APIRouter(prefix="/users")
+router = APIRouter(prefix="/users" , tags=["Users"])
 
 
 @router.get("/")

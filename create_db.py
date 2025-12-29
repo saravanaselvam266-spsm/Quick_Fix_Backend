@@ -22,7 +22,7 @@ def create_database():
         cursor = con.cursor()
         
         # Check if exists
-        cursor.execute(f"SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{new_db_name}'")
+        cursor.execute(f"SELECT 1 FROM pg_catalog.pg_database WHERE dataname = '{new_db_name}'")
         exists = cursor.fetchone()
         
         if not exists:

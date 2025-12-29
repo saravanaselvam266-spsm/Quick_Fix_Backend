@@ -4,7 +4,7 @@ from models.service_model import Service
 from schema.service_schema import ServiceInput
 from dependencies import connect_db
 
-router = APIRouter(prefix="/services")
+router = APIRouter(prefix="/services" ,tags=["Services"])
 
 
 

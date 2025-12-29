@@ -66,6 +66,7 @@ def get_user_bookings(user_id: int, db: Session = Depends(connect_db)):
 def get_vendor_bookings(vendor_id: int, db: Session = Depends(connect_db)):
     return db.query(Booking).filter(Booking.vendor_id == vendor_id).order_by(Booking.date_time.desc()).all()
 
+
 @router.post("/", response_model=BookingResponse)
 def create_booking(data: BookingInput, db: Session = Depends(connect_db)):
     # vendor_id is usually None initially for broadcast flow

@@ -4,7 +4,7 @@ from models.payment_model import Payment
 from schema.payment_schema import PaymentInput
 from dependencies import connect_db
 
-router = APIRouter(prefix="/payments")
+router = APIRouter(prefix="/payments" , tags=["Payments"])
 
 @router.get("/")
 def get_all_payments(db:Session = Depends(connect_db)):
