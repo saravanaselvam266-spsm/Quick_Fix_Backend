@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from models.user_model import User
 from schema.user_schema import UserInput, CustomerSignup, VendorSignup, LoginInput
-from dependencies import connect_db
+from dependencies import connect_db, get_current_user
 from models.booking_model import Booking
 from sqlalchemy import func
+from core.security import get_password_hash, verify_password, create_access_token
 
 router = APIRouter(prefix="/users" , tags=["Users"])
 
@@ -25,7 +26,17 @@ def get_single_user(user_id: int, db: Session = Depends(connect_db)):
 
 @router.post("/")
 def create_user(data: UserInput, db: Session = Depends(connect_db)):
-    new_data = User(**data.model_dump())
+    # 1. Hashing
+    user_dict = data.model_dump()
+    # Handle different field names if necessary, but assuming password_hash is passed
+    # If the input sends "password", we hash it. 
+    if 'password' in user_dict:
+        user_dict['password_hash'] = get_password_hash(user_dict.pop('password'))
+    elif 'password_hash' in user_dict:
+        # Fallback if somehow it came through (unlikely with strict schema)
+        user_dict['password_hash'] = get_password_hash(user_dict['password_hash'])
+
+    new_data = User(**user_dict)
     db.add(new_data)
     db.commit()
     db.refresh(new_data)
@@ -48,8 +59,15 @@ def delete_user(user_id: int, db: Session = Depends(connect_db)):
 
 @router.post("/customers")
 def create_customer(data: CustomerSignup, db: Session = Depends(connect_db)):
+    # 1. Hashing
+    user_dict = data.model_dump()
+    if 'password' in user_dict:
+         user_dict['password_hash'] = get_password_hash(user_dict.pop('password'))
+    else:
+         user_dict['password_hash'] = get_password_hash(user_dict.get('password_hash'))
+
     # Explicitly set role
-    new_user = User(**data.model_dump(), role="customer")
+    new_user = User(**user_dict, role="customer")
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -62,8 +80,12 @@ def create_vendor(data: VendorSignup, db: Session = Depends(connect_db)):
     vendor_data["role"] = "vendor"
     vendor_data["rating"] = 0.0
     
+    # 1. Hashing
+    # 1. Hashing
+    if 'password' in vendor_data:
+         vendor_data['password_hash'] = get_password_hash(vendor_data.pop('password'))
+    
     # Ensure mapping matches model
-    # Note: Schema has experience_years, model has experience_years
     new_vendor = User(**vendor_data)
 
     db.add(new_vendor)
@@ -81,24 +103,41 @@ def create_vendor(data: VendorSignup, db: Session = Depends(connect_db)):
 @router.post("/login")
 def login_user(data: LoginInput, db: Session = Depends(connect_db)):
 
+    # Robust login: Strip whitespace and handle case-insensitive email
+    username = data.username.strip()
+    
+    # Check case-insensitive email OR phone
+    # func.lower() requires 'from sqlalchemy import func' which is already imported
     user = (
         db.query(User)
-        .filter((User.email == data.username) | (User.phone == data.username))
+        .filter(
+            (func.lower(User.email) == func.lower(username)) | 
+            (User.phone == username)
+        )
         .first()
     )
 
     if not user:
         return {"error": "User not found"}
 
-    # In production use hashing!
-    if user.password_hash != data.password:
+    # 1. Verify Password
+    if not verify_password(data.password, user.password_hash):
         return {"error": "Invalid password"}
 
-    return {"user_id": user.user_id, "name": user.name, "role": user.role}
+    # 2. Create Token
+    access_token = create_access_token(data={"sub": str(user.user_id), "role": user.role})
+
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user_id": user.user_id, 
+        "name": user.name, 
+        "role": user.role
+    }
 
 
 @router.get("/dashboard/{user_id}")
-def user_dashboard(user_id: int, db: Session = Depends(connect_db)):
+def user_dashboard(user_id: int, db: Session = Depends(connect_db), current_user: User = Depends(get_current_user)):
 
     user = db.query(User).filter(User.user_id == user_id).first()
     if not user:
@@ -148,7 +187,7 @@ def user_dashboard(user_id: int, db: Session = Depends(connect_db)):
 
 
 @router.get("/dashboard/summary/{user_id}")
-def user_dashboard_summary(user_id: int, db: Session = Depends(connect_db)):
+def user_dashboard_summary(user_id: int, db: Session = Depends(connect_db), current_user: User = Depends(get_current_user)):
 
     upcoming = db.query(Booking).filter(
         Booking.customer_id == user_id,
@@ -172,7 +211,7 @@ def user_dashboard_summary(user_id: int, db: Session = Depends(connect_db)):
     }
 
 @router.get("/vendor/stats/{vendor_id}")
-def get_vendor_stats(vendor_id: int, db: Session = Depends(connect_db)):
+def get_vendor_stats(vendor_id: int, db: Session = Depends(connect_db), current_user: User = Depends(get_current_user)):
     from datetime import datetime, timedelta
     
     today = datetime.utcnow().date()

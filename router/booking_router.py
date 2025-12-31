@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from dependencies import connect_db
+from dependencies import connect_db, get_current_user
+from models.user_model import User
 from models.booking_model import Booking
 from schema.booking_schema import BookingInput, BookingResponse
 from math import radians, cos, sin, asin, sqrt
@@ -28,7 +29,7 @@ def haversine(lon1, lat1, lon2, lat2):
     return c * r
 
 @router.get("/", response_model=List[BookingResponse])
-def get_bookings(db: Session = Depends(connect_db)):
+def get_bookings(db: Session = Depends(connect_db), current_user: User = Depends(get_current_user)):
     return db.query(Booking).all()
 
 @router.get("/nearby", response_model=List[BookingResponse])
@@ -36,7 +37,8 @@ def get_nearby_bookings(
     lat: float, 
     lon: float, 
     radius: float = 10.0, 
-    db: Session = Depends(connect_db)
+    db: Session = Depends(connect_db),
+    current_user: User = Depends(get_current_user)
 ):
     # Fetch all pending bookings (optimization: filter rough box in SQL first if scale needed)
     pending_bookings = db.query(Booking).filter(Booking.status == "pending").all()
@@ -59,25 +61,35 @@ def get_booking(booking_id: int, db: Session = Depends(connect_db)):
         raise HTTPException(status_code=404, detail="Booking not found")
 
 @router.get("/user/{user_id}", response_model=List[BookingResponse])
-def get_user_bookings(user_id: int, db: Session = Depends(connect_db)):
+def get_user_bookings(user_id: int, db: Session = Depends(connect_db), current_user: User = Depends(get_current_user)):
     return db.query(Booking).filter(Booking.customer_id == user_id).order_by(Booking.date_time.desc()).all()
 
 @router.get("/vendor/{vendor_id}", response_model=List[BookingResponse])
-def get_vendor_bookings(vendor_id: int, db: Session = Depends(connect_db)):
+def get_vendor_bookings(vendor_id: int, db: Session = Depends(connect_db), current_user: User = Depends(get_current_user)):
     return db.query(Booking).filter(Booking.vendor_id == vendor_id).order_by(Booking.date_time.desc()).all()
 
 
 @router.post("/", response_model=BookingResponse)
-def create_booking(data: BookingInput, db: Session = Depends(connect_db)):
+def create_booking(data: BookingInput, db: Session = Depends(connect_db), current_user: User = Depends(get_current_user)):
     # vendor_id is usually None initially for broadcast flow
     new_booking = Booking(**data.dict())
+    if current_user.role != "customer": # Optional Safety check
+         pass 
+         
+    new_booking.customer_id = current_user.user_id # Force customer_id to match token owner for safety
     db.add(new_booking)
     db.commit()
     db.refresh(new_booking)
     return new_booking
 
 @router.put("/{booking_id}/accept")
-def accept_booking(booking_id: int, vendor_id: int, db: Session = Depends(connect_db)):
+def accept_booking(booking_id: int, vendor_id: int, db: Session = Depends(connect_db), current_user: User = Depends(get_current_user)):
+    # Verify the vendor accepting is the one logged in
+    if current_user.role != "vendor":
+         raise HTTPException(status_code=403, detail="Only vendors can accept bookings")
+         
+    if int(vendor_id) != current_user.user_id:
+         raise HTTPException(status_code=403, detail="You can only accept jobs for your own account")
     booking = db.query(Booking).filter(Booking.booking_id == booking_id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
@@ -91,7 +103,7 @@ def accept_booking(booking_id: int, vendor_id: int, db: Session = Depends(connec
     return {"message": "Booking accepted", "booking_id": booking_id, "vendor_id": vendor_id}
 
 @router.put("/{booking_id}")
-def update_booking(booking_id: int, data: BookingInput, db: Session = Depends(connect_db)):
+def update_booking(booking_id: int, data: BookingInput, db: Session = Depends(connect_db), current_user: User = Depends(get_current_user)):
     db.query(Booking).filter(Booking.booking_id == booking_id).update(data.dict())
     db.commit()
     return {"message": "Booking updated"}

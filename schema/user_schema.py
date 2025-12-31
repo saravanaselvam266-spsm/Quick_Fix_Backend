@@ -5,7 +5,7 @@ class UserInput(BaseModel):
     name : str
     email : str
     phone : str
-    password_hash : str
+    password : str
     role : str
     address : str
     specialty : str
@@ -17,14 +17,14 @@ class CustomerSignup(BaseModel):
     name: str
     email: str
     phone: str
-    password_hash: str
+    password: str
     address: str
 
 class VendorSignup(BaseModel):
     name: str
     email: str
     phone: str
-    password_hash: str
+    password: str
     address: str
     specialty: Optional[str] = None
     experience_years: Optional[float] = None  
