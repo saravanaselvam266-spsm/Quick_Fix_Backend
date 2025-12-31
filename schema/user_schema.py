@@ -20,6 +20,13 @@ class CustomerSignup(BaseModel):
     password: str
     address: str
 
+class AdminSignup(BaseModel):
+    name: str
+    email: str
+    phone: str
+    password: str
+    address: Optional[str] = None
+
 class VendorSignup(BaseModel):
     name: str
     email: str

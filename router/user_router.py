@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from models.user_model import User
-from schema.user_schema import UserInput, CustomerSignup, VendorSignup, LoginInput
+from schema.user_schema import UserInput, CustomerSignup, VendorSignup, LoginInput, AdminSignup
+
 from dependencies import connect_db, get_current_user
 from models.booking_model import Booking
 from sqlalchemy import func
@@ -28,6 +29,12 @@ def get_single_user(user_id: int, db: Session = Depends(connect_db)):
 def create_user(data: UserInput, db: Session = Depends(connect_db)):
     # 1. Hashing
     user_dict = data.model_dump()
+    
+    # Check if user already exists
+    existing_user = db.query(User).filter((User.email == user_dict['email']) | (User.phone == user_dict['phone'])).first()
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this email or phone already exists")
+
     # Handle different field names if necessary, but assuming password_hash is passed
     # If the input sends "password", we hash it. 
     if 'password' in user_dict:
@@ -61,6 +68,12 @@ def delete_user(user_id: int, db: Session = Depends(connect_db)):
 def create_customer(data: CustomerSignup, db: Session = Depends(connect_db)):
     # 1. Hashing
     user_dict = data.model_dump()
+
+    # Check if user already exists
+    existing_user = db.query(User).filter((User.email == user_dict['email']) | (User.phone == user_dict['phone'])).first()
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this email or phone already exists")
+
     if 'password' in user_dict:
          user_dict['password_hash'] = get_password_hash(user_dict.pop('password'))
     else:
@@ -80,7 +93,11 @@ def create_vendor(data: VendorSignup, db: Session = Depends(connect_db)):
     vendor_data["role"] = "vendor"
     vendor_data["rating"] = 0.0
     
-    # 1. Hashing
+    # Check if user already exists
+    existing_user = db.query(User).filter((User.email == vendor_data['email']) | (User.phone == vendor_data['phone'])).first()
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this email or phone already exists")
+    
     # 1. Hashing
     if 'password' in vendor_data:
          vendor_data['password_hash'] = get_password_hash(vendor_data.pop('password'))
@@ -97,6 +114,33 @@ def create_vendor(data: VendorSignup, db: Session = Depends(connect_db)):
         "vendor_id": new_vendor.user_id,
         "name": new_vendor.name,
         "role": new_vendor.role,
+    }
+
+
+@router.post("/admins")
+def create_admin(data: AdminSignup, db: Session = Depends(connect_db)):
+    # 1. Hashing
+    user_dict = data.model_dump()
+    
+    # Check if user already exists
+    existing_user = db.query(User).filter((User.email == user_dict['email']) | (User.phone == user_dict['phone'])).first()
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this email or phone already exists")
+
+    if 'password' in user_dict:
+         user_dict['password_hash'] = get_password_hash(user_dict.pop('password'))
+    
+    # 2. Set Role
+    new_admin = User(**user_dict, role="admin")
+    
+    db.add(new_admin)
+    db.commit()
+    db.refresh(new_admin)
+    
+    return {
+        "message": "Admin created successfully",
+        "user_id": new_admin.user_id,
+        "role": new_admin.role
     }
 
 
