@@ -3,10 +3,10 @@ from typing import Optional
 from jose import jwt
 import bcrypt
 
-# 1. Config
+# 1. Configuration section
 SECRET_KEY = "my_super_secret_key" # Change this in real production!
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 # Token will expired after 60 min 
 
 # 2. Setup Password Hashing
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
