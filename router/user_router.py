@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from models.user_model import User
-from schema.user_schema import UserInput, CustomerSignup, VendorSignup, LoginInput, AdminSignup
+from schema.user_schema import UserInput, CustomerSignup, VendorSignup, LoginInput, AdminSignup, ProfileUpdate
 
 from dependencies import connect_db, get_current_user
 from models.booking_model import Booking
@@ -50,11 +50,47 @@ def create_user(data: UserInput, db: Session = Depends(connect_db)):
     return new_data
 
 
+@router.put("/profile/{user_id}")
+def update_user_profile(user_id: int, data: ProfileUpdate, db: Session = Depends(connect_db), current_user: User = Depends(get_current_user)):
+    user_query = db.query(User).filter(User.user_id == user_id)
+    existing_user = user_query.first()
+    
+    if not existing_user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    update_data = data.model_dump(exclude_unset=True)
+    user_query.update(update_data)
+    db.commit()
+    
+    updated_user = user_query.first()
+    return updated_user
+
+
 @router.put("/{user_id}")
 def update_user(user_id: int, data: UserInput, db: Session = Depends(connect_db)):
-    db.query(User).filter(User.user_id == user_id).update(data.model_dump())
+    # 1. First, find the user in our database using their ID
+    db_user = db.query(User).filter(User.user_id == user_id).first()
+    
+    # 2. If the user doesn't exist, show an error
+    if not db_user:
+        return {"message": "User not found"}
+
+    # 3. Update the user details step-by-step
+    # This is very clear: we are putting the new data into the database record
+    db_user.name = data.name
+    db_user.email = data.email
+    db_user.phone = data.phone
+    db_user.role = data.role
+    db_user.address = data.address
+    db_user.specialty = data.specialty
+    db_user.experience_years = data.experience_years
+    db_user.rating = data.rating
+    db_user.availability = data.availability
+
+    # 4. Save (commit) the changes to the database
     db.commit()
-    return {"message": "User updated"}
+    
+    return {"message": "User updated successfully"}
 
 
 @router.delete("/{user_id}")
@@ -155,8 +191,8 @@ def login_user(data: LoginInput, db: Session = Depends(connect_db)):
     user = (
         db.query(User)
         .filter(
-            (func.lower(User.email) == func.lower(username)) | 
-            (User.phone == username)
+            (func.lower(User.email) == func.lower(username)) 
+            # (User.phone == username)
         )
         .first()
     )

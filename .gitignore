@@ -20,3 +20,8 @@ __pycache__/
 # Database (if local SQLite)
 *.db
 
+# ignore explanation folder
+.explanation
+
+
+

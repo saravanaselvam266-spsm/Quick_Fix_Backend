@@ -5,11 +5,10 @@ class UserInput(BaseModel):
     name : str
     email : str
     phone : str
-    password : str
     role : str
     address : str
     specialty : str
-    experience_year : float
+    experience_years : float
     rating : float
     availability : bool
 
@@ -40,4 +39,9 @@ class VendorSignup(BaseModel):
 class LoginInput(BaseModel):
     username: str  
     password: str
+
+class ProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
 
