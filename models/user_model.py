@@ -1,11 +1,12 @@
-from sqlalchemy import Column , Integer , String , Boolean , Float , DateTime 
+from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime
 from datetime import datetime
 from db.database import Base
+
 
 class User(Base):
     __tablename__ = "users"
 
-    user_id = Column(Integer, primary_key = True)
+    user_id = Column(Integer, primary_key=True)
     name = Column(String)
     email = Column(String)
     phone = Column(String)
@@ -17,6 +18,3 @@ class User(Base):
     rating = Column(Float)
     availability = Column(Boolean)
     created_at = Column(DateTime, default=datetime.utcnow)
-
-    
-    
